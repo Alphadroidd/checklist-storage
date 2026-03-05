@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Checklist Obra ⚡</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Checklist Obra">
+<meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDrdQK4BdemjUDTtR1QsNCAqrifEzIluSg",
+    authDomain: "gabi-tali-compras.firebaseapp.com",
+    databaseURL: "https://gabi-tali-compras-default-rtdb.firebaseio.com",
+    projectId: "gabi-tali-compras",
+    storageBucket: "gabi-tali-compras.firebasestorage.app",
+    messagingSenderId: "1009003970792",
+    appId: "1:1009003970792:web:62a57cb64222ef5795095d"
+  };
+
+  let app, db;
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+  } catch(e) {
+    console.warn("Firebase init failed, using localStorage:", e.message);
+  }
+
+  window.firebaseDB = db;
+  window.firebaseRef = ref;
+  window.firebaseSet = set;
+  window.firebaseGet = get;
+  window.firebaseOnValue = onValue;
+  window.firebaseUpdate = update;
+  window.firebaseReady = !!db;
+  window.dispatchEvent(new Event('firebaseLoaded'));
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:          #0f1117;
+  --card:        #181c27;
+  --card-hover:  #1e2334;
+  --elevated:    #232840;
+  --border:      #2a3048;
+  --border-lt:   #353d5a;
+  --amber:       #f59e0b;
+  --amber-dim:   #92620a;
+  --amber-glow:  rgba(245,158,11,0.12);
+  --green:       #22c55e;
+  --green-dim:   rgba(34,197,94,0.1);
+  --red:         #ef4444;
+  --red-dim:     rgba(239,68,68,0.1);
+  --text:        #e8eaf0;
+  --text2:       #8892a4;
+  --text3:       #4a5568;
+  --mono:        'IBM Plex Mono', monospace;
+  --sans:        'IBM Plex Sans', sans-serif;
+  --r:           6px;
+  --r-lg:        12px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+#app { max-width: 720px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 80px; }
+
+/* HEADER */
+.header { background: var(--card); border-bottom: 2px solid var(--amber); padding: 14px 14px 0; position: sticky; top: 0; z-index: 100; }
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { font-size: 20px; width: 36px; height: 36px; background: var(--amber-glow); border: 1px solid var(--amber-dim); border-radius: var(--r); display: flex; align-items: center; justify-content: center; }
+.brand-title { font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: .12em; color: var(--amber); }
+.brand-sub { font-size: 11px; color: var(--text3); }
+.stats { display: flex; gap: 5px; }
+.stat { display: flex; flex-direction: column; align-items: center; padding: 3px 9px; border-radius: var(--r); background: var(--elevated); border: 1px solid var(--border); min-width: 40px; }
+.stat.ok  { border-color: rgba(34,197,94,.3); background: var(--green-dim); }
+.stat.bad { border-color: rgba(239,68,68,.3); background: var(--red-dim); }
+.stat-n { font-family: var(--mono); font-size: 15px; font-weight: 600; line-height: 1; }
+.stat.ok  .stat-n { color: var(--green); }
+.stat.bad .stat-n { color: var(--red); }
+.stat-l { font-size: 9px; font-family: var(--mono); letter-spacing: .08em; color: var(--text3); text-transform: uppercase; }
+.prog-wrap { position: relative; height: 4px; background: var(--border); margin: 0 -14px; }
+.prog-bar { height: 100%; background: linear-gradient(90deg, var(--amber), #fcd34d); transition: width .4s; width: 0%; box-shadow: 0 0 8px rgba(245,158,11,.5); }
+.prog-pct { position: absolute; right: 4px; top: -18px; font-family: var(--mono); font-size: 10px; color: var(--amber); }
+
+/* SYNC STATUS */
+.sync-bar { background: var(--card); padding: 4px 14px; font-family: var(--mono); font-size: 10px; color: var(--text3); display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
+.sync-dot.online { background: var(--green); }
+.sync-dot.syncing { background: var(--amber); animation: pulse .8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* TABS */
+.tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); padding: 0 8px; position: sticky; top: 74px; z-index: 99; }
+.tab { flex: 1; padding: 11px 8px 9px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text2); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: .15s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.badge { background: var(--red); color: #fff; font-family: var(--mono); font-size: 10px; font-weight: 600; border-radius: 10px; padding: 1px 6px; display: none; }
+
+/* PANELS */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* TOOLBAR */
+.toolbar { padding: 10px 12px 6px; display: flex; flex-direction: column; gap: 7px; background: var(--bg); position: sticky; top: 116px; z-index: 98; border-bottom: 1px solid var(--border); }
+.search-wrap { position: relative; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
+.search-input { width: 100%; padding: 8px 32px 8px 30px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-family: var(--sans); font-size: 13px; outline: none; transition: border-color .15s; }
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus { border-color: var(--amber); }
+.search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; font-size: 12px; padding: 4px; display: none; }
+.row2 { display: flex; gap: 7px; }
+.filter-select { flex: 1; padding: 7px 10px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; cursor: pointer; }
+.filter-select option { background: var(--card); }
+.filter-select:focus { border-color: var(--amber); }
+.view-toggle { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.vbtn { padding: 6px 12px; background: none; border: none; color: var(--text2); font-family: var(--mono); font-size: 11px; cursor: pointer; transition: .15s; }
+.vbtn.active { background: var(--amber-glow); color: var(--amber); }
+.count-bar { padding: 5px 14px; }
+.count-bar span { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+
+/* ITEM LIST */
+.item-list { padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+
+/* CATEGORY HEADER */
+.cat-hdr { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); padding: 12px 10px 3px; display: flex; align-items: center; gap: 8px; }
+.cat-hdr::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.cat-count { font-size: 9px; color: var(--text3); font-weight: 400; }
+
+/* ITEM CARD */
+.item-card { display: flex; align-items: center; gap: 9px; padding: 9px 9px 9px 8px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); transition: border-color .15s, background .15s; animation: slide-in .15s ease; }
+@keyframes slide-in { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.item-card:hover { background: var(--card-hover); border-color: var(--border-lt); }
+.item-card.checked { background: var(--green-dim); border-color: rgba(34,197,94,.25); }
+.item-card.bought  { opacity: .55; border-left: 3px solid var(--green); }
+
+/* CHECK CIRCLE */
+.chk { width: 25px; height: 25px; min-width: 25px; border-radius: 50%; border: 2px solid var(--border-lt); background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent; transition: .15s; }
+.chk:hover { border-color: var(--green); background: var(--green-dim); }
+.checked .chk { border-color: var(--green); background: var(--green); color: #fff; }
+
+/* ITEM BODY */
+.item-body { flex: 1; min-width: 0; cursor: pointer; }
+.item-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.checked .item-name { color: var(--text2); text-decoration: line-through; text-decoration-color: var(--green); }
+.bought  .item-name { color: var(--text2); text-decoration: line-through; text-decoration-color: var(--green); }
+.item-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.cat-tag { display: inline-block; padding: 1px 5px; border-radius: 3px; font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; background: var(--elevated); color: var(--text3); border: 1px solid var(--border); margin-top: 3px; }
+
+/* ACTION BUTTONS */
+.actions { display: flex; gap: 3px; }
+.abtn { width: 29px; height: 29px; border: 1px solid var(--border); border-radius: var(--r); background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text2); transition: .15s; }
+.abtn:hover { background: var(--elevated); }
+.abtn.cart:hover, .abtn.cart.in  { border-color: var(--amber-dim); background: var(--amber-glow); color: var(--amber); }
+.abtn.del:hover { border-color: rgba(239,68,68,.4); background: var(--red-dim); color: var(--red); }
+
+/* CART HEADER */
+.cart-hdr { padding: 14px 14px 6px; }
+.cart-hdr-row { display: flex; justify-content: space-between; align-items: center; }
+.cart-title { font-family: var(--mono); font-size: 15px; font-weight: 600; }
+.cart-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.btn-clear { padding: 5px 10px; background: var(--red-dim); border: 1px solid rgba(239,68,68,.3); border-radius: var(--r); color: var(--red); font-size: 11px; font-family: var(--mono); cursor: pointer; display: none; }
+.btn-clear:hover { background: rgba(239,68,68,.2); }
+
+/* CART ITEM */
+.cart-list .item-card { border-left: 3px solid var(--amber); }
+.cart-list .item-card.bought { border-left-color: var(--green); }
+
+/* EMPTY */
+.empty { text-align: center; padding: 50px 20px; display: none; }
+.empty.show { display: block; }
+.empty-icon { font-size: 36px; margin-bottom: 10px; opacity: .35; }
+.empty-t { font-family: var(--mono); font-size: 15px; color: var(--text2); margin-bottom: 5px; }
+.empty-s { font-size: 12px; color: var(--text3); max-width: 240px; margin: 0 auto; }
+
+/* NO RESULTS */
+.no-res { text-align: center; padding: 36px 20px; color: var(--text3); font-family: var(--mono); font-size: 13px; }
+
+/* MODAL */
+.modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
+.modal-ov.open { display: flex; animation: bg-in .2s; }
+@keyframes bg-in { from{opacity:0} to{opacity:1} }
+.modal-box { background: var(--card); border: 1px solid var(--border-lt); border-bottom: none; border-radius: var(--r-lg) var(--r-lg) 0 0; width: 100%; max-width: 720px; max-height: 88vh; overflow-y: auto; padding: 22px 18px 44px; position: relative; animation: slide-up .25s ease; }
+@keyframes slide-up { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-close { position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; background: var(--elevated); border: 1px solid var(--border); border-radius: 50%; color: var(--text2); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.modal-close:hover { background: var(--border); color: var(--text); }
+.modal-cat { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--amber); margin-bottom: 5px; }
+.modal-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 14px; padding-right: 28px; line-height: 1.3; }
+.modal-grid { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 14px; }
+.modal-row { display: grid; grid-template-columns: 90px 1fr; border-bottom: 1px solid var(--border); }
+.modal-row:last-child { border-bottom: none; }
+.modal-lbl { font-family: var(--mono); font-size: 11px; color: var(--text3); padding: 7px 9px; background: var(--elevated); display: flex; align-items: center; }
+.modal-val { font-size: 13px; color: var(--text); padding: 7px 9px; }
+.modal-sec { margin-top: 14px; }
+.modal-sec-t { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text3); margin-bottom: 7px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.modal-specs { list-style: none; display: grid; gap: 3px; }
+.modal-specs li { font-family: var(--mono); font-size: 12px; color: var(--text2); padding: 5px 8px; background: var(--elevated); border-radius: 4px; display: flex; align-items: center; gap: 7px; }
+.modal-specs li::before { content: '›'; color: var(--amber); font-weight: 600; }
+.modal-obs { font-size: 13px; color: var(--text2); line-height: 1.6; padding: 9px; background: var(--elevated); border-radius: var(--r); border-left: 3px solid var(--amber-dim); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--elevated); border: 1px solid var(--border-lt); border-radius: var(--r); padding: 9px 16px; font-family: var(--mono); font-size: 12px; color: var(--text); z-index: 300; transition: transform .22s, opacity .22s; opacity: 0; white-space: nowrap; box-shadow: 0 4px 24px rgba(0,0,0,.4); }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.green { border-color: rgba(34,197,94,.5); color: var(--green); }
+.toast.amber { border-color: var(--amber-dim); color: var(--amber); }
+.toast.red   { border-color: rgba(239,68,68,.4); color: var(--red); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-lt); border-radius: 2px; }
+
+@media (min-width: 560px) {
+  .toolbar { flex-direction: row; flex-wrap: wrap; }
+  .search-wrap { flex: 1; min-width: 180px; }
+  .row2 { flex: 1; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <div class="brand-title">CHECKLIST OBRA</div>
+          <div class="brand-sub">Conferência de Materiais</div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="stat-n" id="cnt-total">0</span><span class="stat-l">total</span></div>
+        <div class="stat ok"><span class="stat-n" id="cnt-ok">0</span><span class="stat-l">ok</span></div>
+        <div class="stat bad"><span class="stat-n" id="cnt-bad">0</span><span class="stat-l">faltam</span></div>
+      </div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-bar" id="prog-bar"></div>
+      <span class="prog-pct" id="prog-pct">0%</span>
+    </div>
+  </header>
+
+  <!-- SYNC STATUS -->
+  <div class="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-txt">Conectando...</span>
+  </div>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button class="tab active" id="tab-cl" onclick="switchTab('cl')">☑ Checklist</button>
+    <button class="tab" id="tab-cart" onclick="switchTab('cart')">🛒 Lista de Compras <span class="badge" id="cart-badge">0</span></button>
+  </nav>
+
+  <!-- CHECKLIST PANEL -->
+  <div id="panel-cl" class="panel active">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search" class="search-input" placeholder="Buscar materiais..." oninput="onSearch()">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+      </div>
+      <div class="row2">
+        <select id="cat-filter" class="filter-select" onchange="onFilter()">
+          <option value="">Todas as categorias</option>
+        </select>
+        <div class="view-toggle">
+          <button class="vbtn active" id="v-all" onclick="setView('all')">Todos</button>
+          <button class="vbtn" id="v-pend" onclick="setView('pending')">Pendentes</button>
+        </div>
+      </div>
+    </div>
+    <div class="count-bar"><span id="vis-count">0 itens</span></div>
+    <div id="cl-list" class="item-list"></div>
+  </div>
+
+  <!-- CART PANEL -->
+  <div id="panel-cart" class="panel">
+    <div class="cart-hdr">
+      <div class="cart-hdr-row">
+        <h2 class="cart-title">Lista de Compras</h2>
+        <button class="btn-clear" id="btn-clear" onclick="clearCart()">Limpar tudo</button>
+      </div>
+      <p class="cart-sub" id="cart-sub">Itens adicionados durante a conferência</p>
+    </div>
+    <div id="cart-list" class="item-list cart-list"></div>
+    <div class="empty show" id="cart-empty">
+      <div class="empty-icon">🛒</div>
+      <p class="empty-t">Lista vazia</p>
+      <p class="empty-s">Adicione itens faltantes pelo ícone de carrinho no Checklist</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal" onclick="closeModal(event)">
+  <div class="modal-box" id="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-cat" id="m-cat"></div>
+    <h2 class="modal-title" id="m-title"></h2>
+    <div class="modal-grid" id="m-grid"></div>
+    <div class="modal-sec" id="m-specs-sec" style="display:none">
+      <div class="modal-sec-t">Especificações Técnicas</div>
+      <ul class="modal-specs" id="m-specs"></ul>
+    </div>
+    <div class="modal-sec" id="m-obs-sec" style="display:none">
+      <div class="modal-sec-t">Observações</div>
+      <p class="modal-obs" id="m-obs"></p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── CATALOG DATA (embutido — não depende de fetch) ────────────────────────────
+const CATALOG = [{"id":"item-001","categoria":"LUMINÁRIAS LED","item":"Luminária painel LED 98553","modelo":"SLIM TECH - RLT6250W4K","marca":"LLUMM Bronzearte","cor":"Branco neutro","tamanho":"620x620x8 mm","material":"Alumínio","especificacoes":["Potência: 50W","Fluxo luminoso: 5000lm","Temperatura de cor: 4000K","Ângulo de abertura: 120°","IRC: >80","Vida útil média: 30000h","Tensão de entrada: 127-220V","Fator de potência: >0,9","Frequência entrada: 50/60Hz","Eficiência: 100lm/W","Grau de proteção: IP20","Garantia: 5 anos"],"observacoes":"Uso na sala de reunião e sala B (embutida no forro). Caso seja necessário painel de sobrepor, utilizar o modelo BACKLIGHT Quadrado RMT11504BCV2, fornecedor LLUMM Bronzearte, código HuB 85793. Alternativa: Philips RC048B LED40S/840 100-277 W62L62 LA."},{"id":"item-002","categoria":"LUMINÁRIAS LED","item":"Luminária painel LED 29603","modelo":"SLIM TECH - RLT6250W3K","marca":"LLUMM Bronzearte","cor":"Branco quente","tamanho":"620x620x8 mm","material":"Alumínio","especificacoes":["Potência: 50W","Fluxo luminoso: 5000lm","Temperatura de cor: 3000K","Ângulo de abertura: 120°","IRC: >80","Vida útil média: 30000h","Tensão de entrada: 127-220V","Fator de potência: >0,9","Frequência entrada: 50/60Hz","Eficiência: 100lm/W","Grau de proteção: IP20","Garantia: 5 anos"],"observacoes":"Uso no lobby e sala MF (embutida no forro). Alternativa: PHILIPS RC048B LED40S/830 100-277 W62L62 LA."},{"id":"item-003","categoria":"LUMINÁRIAS LED","item":"Luminária painel LED 77513","modelo":"SLIM LED - RL22185BCV2","marca":"LLUMM","cor":"Branco neutro","tamanho":"225x225x8mm","material":"Alumínio","especificacoes":["Potência: 18W","Fluxo luminoso: 1530lm","Temperatura de cor: 4000K","Ângulo de abertura: 120°","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Frequência entrada: 50/60Hz","Eficiência: 85lm/W","Grau de proteção: IP40","Garantia: 2 anos"],"observacoes":"Uso em antecâmaras, banheiros e depósitos. Alternativa: LEDVANCE INSERT SQUARE 18W/4000K, 7014194."},{"id":"item-004","categoria":"LUMINÁRIAS LED","item":"Luminária painel LED 42151","modelo":"SLIM LED - RL22184BC","marca":"LLUMM","cor":"Branco quente","tamanho":"225x225x8mm","material":"Alumínio","especificacoes":["Potência: 18W","Fluxo luminoso: 1530lm","Temperatura de cor: 3000K","Ângulo de abertura: 120°","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Frequência entrada: 50/60Hz","Eficiência: 85lm/W","Grau de proteção: IP40","Garantia: 2 anos"],"observacoes":"Uso no lobby e telhadinhos sobre as entradas (nos projetos PP e PC). Alternativa: LEDVANCE INSERT SQUARE 18W/3000K, 7014193."},{"id":"item-005","categoria":"LUMINÁRIAS LED","item":"Luminária painel LED 32810","modelo":"SLIM LED - RL29183BC","marca":"LLUMM Bronzearte","cor":"Branco quente","tamanho":"210x210x28mm","material":"Alumínio","especificacoes":["Potência: 18W","Fluxo luminoso: 1530lm","Temperatura de cor: 3000K","Ângulo de abertura: 120°","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Frequência entrada: 50/60Hz","Eficiência: 85lm/W","Grau de proteção: IP40","Garantia: 2 anos"],"observacoes":"Uso nos telhadinhos sobre as entradas e nas marquises laterais dos projetos PP e PC."},{"id":"item-006","categoria":"LUMINÁRIAS LED","item":"Luminária painel LED 94116","modelo":"SLIM LED - RL22125BCV2","marca":"LLUMM","cor":"Branco neutro","tamanho":"170x170x8mm","material":"Alumínio","especificacoes":["Potência: 12W","Fluxo luminoso: 1020lm","Temperatura de cor: 4000K","Ângulo de abertura: 120°","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Frequência entrada: 50/60Hz","Eficiência: 85lm/W","Grau de proteção: IP40","Garantia: 2 anos"],"observacoes":"Uso no shaft dos quadros elétricos. Alternativa: LEDVANCE INSERT SQUARE 12W/4000K, 7014188."},{"id":"item-007","categoria":"LUMINÁRIAS LED","item":"Plafon caixa d'água 53143","modelo":"W519TBC","marca":"LLUMM Bronzearte","cor":"Branca","tamanho":"Altura 5,6cm, Diâmetro 13,9cm","material":"Termoplástico","especificacoes":["Base E27","Soquete de porcelana com contatos de liga não ferrosa","Termoplástico de alta resistência com aditivo UV","IP 20"],"observacoes":"Uso para iluminação da caixa d'água. Usar lâmpada LED 20W 1600lm 6500K. Alternativa: Tramontina 57499097."},{"id":"item-008","categoria":"PERFIS DE LED E COMPLEMENTOS","item":"Perfil pendente de sobrepor","modelo":"LTPF356DIDP1MBC - Facho duplo","marca":"LLUMM Bronzearte","cor":"Branco","tamanho":"51,2mm x 35,28mm x 1000mm","material":"Alumínio","especificacoes":["Difusor em acrílico PMMA fosco","Acessórios para uso pendente avulso","Utilizar cabos de aço para suspensão","Kit emenda LLUMM LTPALP001","Fita led e driver não incluso","IP20"],"observacoes":"Exclusivo dos projetos PC no lobby. Alternativa: PERFIL & LED 3385P."},{"id":"item-009","categoria":"PERFIS DE LED E COMPLEMENTOS","item":"Iluminação prateleira","modelo":"PALWY22C2MPT - Perfil de embutir com abas","marca":"LLUMM Bronzearte","cor":"Preto","tamanho":"8,8mm x 25,5mm x 2000mm","material":"Alumínio","especificacoes":["Difusor em acrílico PMMA fosco","Fixado em cava na marcenaria","Fita led e driver não incluso","4 tampas de acabamento e 4 suportes inclusos","IP 20"],"observacoes":"Uso nas salas Multipropósito que tenham prateleira. Alternativa: PERFIL & LED 2310E."},{"id":"item-010","categoria":"PERFIS DE LED E COMPLEMENTOS","item":"Fita LED Lobby - DIRETA","modelo":"LDFTI24W5M3K - Fita LED ADVANCED","marca":"LLUMM Bronzearte","cor":"-","tamanho":"Largura 8mm x comprimento 5000mm","material":"Silicone flexível branco","especificacoes":["Potência: 24W/m","Fluxo luminoso: 2400lm/m","Temperatura de cor: 3000K","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 12V (necessita driver)","Eficiência: 100lm/W","Grau de proteção: IP20","Garantia: 2 anos"],"observacoes":"Exclusivo dos projetos PC. Uso no perfil pendente do Lobby, iluminação direta. Alternativa: Nordecor 7099."},{"id":"item-011","categoria":"PERFIS DE LED E COMPLEMENTOS","item":"Fita LED Lobby - INDIRETA","modelo":"LDFTI5W5M3K - Fita LED ADVANCED","marca":"LLUMM Bronzearte","cor":"-","tamanho":"Largura 10mm x comprimento 5000mm","material":"Silicone flexível branco","especificacoes":["Potência: 5W/m","Fluxo luminoso: 500lm/m","Temperatura de cor: 3000K","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 12V (necessita driver)","Eficiência: 100lm/W","Grau de proteção: IP20","Garantia: 2 anos"],"observacoes":"Exclusivo dos projetos PC. Uso no perfil pendente do Lobby, iluminação indireta. Alternativa: Nordecor 7168."},{"id":"item-012","categoria":"PERFIS DE LED E COMPLEMENTOS","item":"Fonte de alimentação - LOBBY","modelo":"FNTS12V12A - Slim","marca":"LLUMM Bronzearte","cor":"Grafite","tamanho":"29mm x 49mm x 196mm","material":"Alumínio","especificacoes":["Potência: 150W","Não dimerizável","Tensão de entrada: 127-220V","Tensão de saída: 12Vdc","Amperagem: 12,5A","Vida útil média: 10000h","Fator de potência: >0,7","Grau de proteção: IP20","Garantia: 3 anos"],"observacoes":"Exclusivo dos projetos PC. Uso para alimentação do perfil pendente do Lobby. Alternativa: Nordecor 7043."},{"id":"item-013","categoria":"PERFIS DE LED E COMPLEMENTOS","item":"Kit Fita LED e Fonte – Sala MP","modelo":"LDFT5W2M3K - STANDART PLUG AND PLAY","marca":"LLUMM Bronzearte","cor":"-","tamanho":"Largura 10mm x comprimento 2000mm","material":"Silicone flexível branco","especificacoes":["Potência: 5W/m","Fluxo luminoso: 400lm/m","Temperatura de cor: 3000K","IRC: >70","Vida útil média: 25000h","Tensão de entrada: 127-220V","Eficiência: 80lm/W","Grau de proteção: IP20","Garantia: 2 anos"],"observacoes":"Uso nas salas multipropósito com prateleira, aplicado no perfil metálico. Alternativa: AVANT 192910534."},{"id":"item-014","categoria":"ARANDELAS","item":"Arandela FIREFLY 1350","modelo":"FIREFLY - 1350","marca":"TKS","cor":"Branca","tamanho":"Base Ø80x2mm / Spot Ø38x100mm / Total 570x150mm","material":"Metal","especificacoes":["Base GU10","Usar apenas lâmpada MR11","Pintura epóxi","Articulada","Difusor em acrílico","IP 65"],"observacoes":"Uso para iluminação do letreiro JW interno. Usar lâmpada MR11 3000K. Alternativa: Metaldomado 50204/GU."},{"id":"item-015","categoria":"ARANDELAS","item":"Arandela retangular 17014","modelo":"GRÉCIA - EXWL16123BCAR","marca":"LLUMM Bronzearte","cor":"Branca","tamanho":"Altura 16cm, Largura 13cm, Prof. 10,8cm","material":"Policarbonato e acrílico","especificacoes":["Potência: 12W","Fluxo luminoso: 880lm","Temperatura de cor: 3000K","Ângulo de abertura: 180°","IRC: >80","Vida útil média: 25000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Eficiência: 73lm/W","Grau de proteção: IP65","Garantia: 2 anos"],"observacoes":"Uso para iluminação externa do prédio. Alternativa: Ideal Iluminação (Lux Time), item 17014."},{"id":"item-016","categoria":"ARANDELAS","item":"Balizador LED 90310","modelo":"MINI HALL - DWHLC2015W3BCV2","marca":"LLUMM Bronzearte","cor":"Branca","tamanho":"Altura 20cm, Largura 10cm, Prof. 4,8cm","material":"Polipropileno","especificacoes":["Potência: 15W","Fluxo luminoso: 1050lm","Temperatura de cor: 3000K","Ângulo de abertura: 120°","IRC: >70","Vida útil média: 25000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Eficiência: 70lm/W","Grau de proteção: IP65","Garantia: 2 anos"],"observacoes":"Uso para iluminação externa em estacionamento e muros. Alternativa: G-LIGHT tartaruga LED LMTP-LED-BR-15-30-3C."},{"id":"item-017","categoria":"BALIZADOR E POSTE","item":"Poste balizador 35742","modelo":"IMPERIAL - MP6011ALPTTRTT","marca":"LLUMM Bronzearte","cor":"Preto","tamanho":"Altura 60cm, Diâmetro 11cm","material":"Alumínio e Policarbonato","especificacoes":["Base E27","Pintura epóxi","Difusor transparente e defletor","IP 65"],"observacoes":"Uso para iluminação de acessos e paisagismo. Usar lâmpada LED bulbo 9W 806lm 3000K."},{"id":"item-018","categoria":"BALIZADOR E POSTE","item":"Luminária para poste ornamental","modelo":"Ornamental Urbana","marca":"Embras","cor":"Preto","tamanho":"Ø654 x 635 mm","material":"Alumínio e vidro","especificacoes":["Temperatura de cor: 3000K","Ângulo de abertura: 90°","Tensão: bivolt","Fator de potência: 0.97","Grau de proteção: IP65","Protetor de surto: sim","Fixação (ponta poste): Ø 63,5 mm","50W, 5500 lm, EB 5034-050 36354","Garantia luminária: 2 anos"],"observacoes":"Para iluminar estacionamento e grandes vãos. Utilizar com poste H=2,40m, total H=3,0m. Alternativa: Lasled."},{"id":"item-019","categoria":"BALIZADOR E POSTE","item":"Poste reto flangeado 54543","modelo":"Poste led","marca":"LLUMM Bronzearte","cor":"Preto","tamanho":"Altura livre 2,40m","material":"Aço galvanizado a fogo","especificacoes":["Com janela de inspeção","Flange: 20x20cm, espessura 1/4\" com 4 chumbadores","Diâmetro: 63,5 mm","Espessura: 2 mm","Pintura: eletrostática a pó","Altura total com luminária: 3,0 m"],"observacoes":"Utilizado com luminária ornamental para iluminar estacionamento. Alternativas: Embras; Lasled."},{"id":"item-020","categoria":"ESPETO DE JARDIM","item":"Espeto articulado 84958","modelo":"GARDEN LAMP - EJ05553PT","marca":"LLUMM Bronzearte","cor":"Preta","tamanho":"Altura 24,5cm, Prof. 10,5cm, Largura 7cm","material":"Polipropileno e policarbonato","especificacoes":["Potência: 5W","Fluxo luminoso: 400lm","Temperatura de cor: 3000K","Ângulo de abertura: 38°","IRC: >80","Vida útil média: 15000h","Tensão de entrada: 127-220V","Fator de potência: >0,5","Eficiência: 80lm/W","Grau de proteção: IP65","Garantia: 2 anos"],"observacoes":"Uso para iluminação do paisagismo. Alternativa: LEDVANCE 7014920."},{"id":"item-021","categoria":"REFLETORES","item":"Refletor LED 36356","modelo":"GARDEN DEEP FIT - LDSMDRFFT10C31V2","marca":"LLUMM Bronzearte","cor":"Preta","tamanho":"Altura 7cm, Largura 9cm, Prof. 3cm","material":"Alumínio com pintura epóxi e vidro temperado","especificacoes":["Potência: 10W","Fluxo luminoso: 800lm","Temperatura de cor: 3000K","Ângulo de abertura: 160°","IRC: ≥70","Vida útil média: 25000h","Eficiência: 80lm/W","Grau de proteção: IP66","Garantia: 2 anos"],"observacoes":"Uso para iluminação do paisagismo. Alternativa: LEDVANCE 7016867."},{"id":"item-022","categoria":"REFLETORES","item":"Refletor LED 42820","modelo":"DEEP - LDSMDRFFT30C31V2","marca":"LLUMM Bronzearte","cor":"Preta","tamanho":"Altura 11,8cm, Largura 9,3cm, Prof. 3,2cm","material":"Alumínio com pintura epóxi e vidro temperado","especificacoes":["Potência: 30W","Fluxo luminoso: 2100lm","Temperatura de cor: 3000K","Ângulo de abertura: 120°","IRC: ≥70","Vida útil média: 25000h","Eficiência: 70lm/W","Grau de proteção: IP66","Garantia: 2 anos"],"observacoes":"Uso para iluminação externa do letreiro, paisagismo e estacionamento. Alternativa: LEDVANCE 7016873."},{"id":"item-023","categoria":"REFLETORES","item":"Refletor LED 84962","modelo":"DEEP - LDSMDRFFT50C31V2","marca":"LLUMM Bronzearte","cor":"Preta","tamanho":"Altura 16cm, Largura 12cm, Prof. 3,2cm","material":"Alumínio com pintura epóxi e vidro temperado","especificacoes":["Potência: 50W","Fluxo luminoso: 3750lm","Temperatura de cor: 3000K","Ângulo: 120°","IRC: ≥70","Vida útil média: 25000h","Eficiência: 75lm/W","Grau de proteção: IP66","Garantia: 2 anos"],"observacoes":"Uso para iluminação externa geral. Alternativa: LEDVANCE 7016887."},{"id":"item-024","categoria":"REFLETORES","item":"Refletor LED 84963","modelo":"DEEP - LDSMDRFFT50C11V2","marca":"LLUMM Bronzearte","cor":"Preta","tamanho":"Altura 16cm, Largura 12cm, Prof. 3,2cm","material":"Alumínio com pintura epóxi e vidro temperado","especificacoes":["Potência: 50W","Fluxo luminoso: 3750lm","Temperatura de cor: 6500K","Ângulo: 120°","IRC: ≥70","Vida útil média: 25000h","Eficiência: 75lm/W","Grau de proteção: IP66","Garantia: 2 anos"],"observacoes":"Uso para iluminação de segurança. Alternativa: LEDVANCE 7016887."},{"id":"item-025","categoria":"LÂMPADAS","item":"Lâmpada LED Bulbo 31609","modelo":"A60 - LDB609C2A1","marca":"LLUMM Bronzearte","cor":"Branco","tamanho":"Altura 10,8cm, Diâmetro 6cm","material":"Plástico","especificacoes":["Potência: 9W","Base: E27","Fluxo luminoso: 806lm","Temperatura de cor: 3000K","Ângulo de abertura: 220°","IRC: 80","Vida útil média: 25000h","Fator de potência: >0,7","Eficiência: 89lm/W","Proteção: IP20","Garantia: 3 anos"],"observacoes":"Uso nos postes balizadores 60cm e em arandelas junto ao prédio. Alternativas: Intral; OSRAM; Philips; Taschibra."},{"id":"item-026","categoria":"LÂMPADAS","item":"Lâmpada LED 29241","modelo":"HIGH POWER - LDBAFP20C6","marca":"LLUMM Bronzearte","cor":"Branco","tamanho":"Altura 10,5cm, Diâmetro 7cm","material":"Plástico","especificacoes":["Potência: 20W","Base: E27","Fluxo luminoso: 1600lm","Temperatura de cor: 6500K","Ângulo de abertura: 200°","IRC: >80","Vida útil média: 25000h","Fator de potência: >0,92","Eficiência: 80lm/W","Proteção: IP20","Garantia: 2 anos"],"observacoes":"Uso no plafonier na caixa d'água. Alternativas: Intral; OSRAM; Philips; Taschibra."},{"id":"item-027","categoria":"LÂMPADAS","item":"Lâmpada MR11","modelo":"SUPERLED MINI DICROICA - 20065","marca":"Ourolux","cor":"Branco","tamanho":"Altura 4,7cm, Diâmetro 3,4cm","material":"Plástico","especificacoes":["Potência: 3W","Base: GU10","Fluxo luminoso: 200lm","Temperatura de cor: 3000K","Ângulo de abertura: 30°","IRC: >80","Vida útil média: 25000h","Fator de potência: >0,4","Eficiência: 66lm/W","Proteção: IP20","Garantia: 1 ano"],"observacoes":"Uso na arandela do letreiro JW. Alternativas: Opus LED LP 37097; Stella STH8513/30."},{"id":"item-028","categoria":"BLOCO AUTÔNOMO","item":"Bloco autônomo","modelo":"MAC iLed 6","marca":"Unitron","cor":"Branca","tamanho":"Altura 11,6cm, Comp. 22,2cm, Prof. 9,2cm","material":"Plástico alto impacto","especificacoes":["Potência: < 4W","Fluxo luminoso: mínimo 270lm","Tensão de entrada: 110-254V","Frequência: 60Hz","Bateria: VRLA 6Vdc/4Ah","Autonomia: 10h","Vida útil LEDs: ~50000h","Vida útil baterias: 2 a 3 anos"],"observacoes":"Uso sobre portas e saídas de emergência. Alternativa: MAX 32L Ref. GG0728, Gevi Gamma, HuB 89662."},{"id":"item-029","categoria":"RELÉ FOTOELÉTRICO","item":"Relé fotoelétrico 25422","modelo":"RFE-131 6POP com tomada BS2","marca":"Margirius","cor":"Vermelho","tamanho":"Altura 37,3mm, Diâmetro 79,1mm","material":"-","especificacoes":["Capacidade para LED: até 200W","Resistente a intempéries","Bivolt","Conjunto relé e tomada BS2","Limite: até 7 luminárias LED"],"observacoes":"Uso para comando de iluminação de paisagismo/estacionamento. Alternativas: Ilumatic; Exatron."},{"id":"item-030","categoria":"SENSOR DE PRESENÇA","item":"Sensor de presença interno 97855","modelo":"ESPi 360","marca":"Intelbras","cor":"Branca","tamanho":"-","material":"-","especificacoes":["Tensão: 100Vac a 240Vac","Alcance: 6m","Altura instalação: 2,2-4m","Ângulo: 360°","Temporização: 10s/30s/1min/5min/10min","Instalação no teto","Grau de proteção: IP20","Potência 127V: 800W / Potência 220V: 1200W"],"observacoes":"Uso para comando de iluminação de áreas internas. Alternativas: Exatron; Margirius."},{"id":"item-031","categoria":"SENSOR DE PRESENÇA","item":"Sensor de presença externo 29334","modelo":"ESP 180","marca":"Intelbras","cor":"Branca","tamanho":"-","material":"-","especificacoes":["Tensão: 100-240V","Alcance: 12m","Altura instalação: 1,8-2,5m","Ângulo: 180°","Temporização: 10s a 7min","Instalação na parede","Grau de proteção: IP44"],"observacoes":"Uso para comando de iluminação de áreas externas. Alternativas: Decorlux; Exatron."},{"id":"item-032","categoria":"CABOS ELÉTRICOS","item":"Cabos Afumex Green 750V","modelo":"Afumex Green 750V - NON-HALOGENATED","marca":"Prysmian","cor":"Variadas","tamanho":"Bitolas 1,5mm² a 50mm²","material":"Cobre com isolação LSHF/A não halogenada","especificacoes":["Condutor: cobre têmpera mole","Encordoamento: classe 5 extraflexível","Normas: NBR13248, NBR 5410, NBR13570","Grau de isolação: 450 a 750V","Temp. contínua: 70°C / sobrecarga: 100°C","Bitolas: 1,5 / 2,5 / 4,0 / 6,0 / 10,0 / 16,0 / 25,0 / 35,0 / 50,0mm²"],"observacoes":"Uso em toda a instalação elétrica. Cores: Branco, Vermelho, Preto, Cinza, Azul Claro, Verde. Alternativas: Cobrecom; General Cable."},{"id":"item-033","categoria":"CABOS ELÉTRICOS","item":"Cabos Afumex Flex 1kV","modelo":"Afumex Flex 1kV - NON-HALOGENATED","marca":"Prysmian","cor":"Variadas","tamanho":"Bitolas 1,5mm² a 95mm²","material":"Cobre com isolação HERP 2 não halogenada","especificacoes":["Condutor: cobre têmpera mole","Encordoamento: classe 5 extraflexível","Grau de isolação: 0,6 a 1kV","Temp. contínua: 90°C / sobrecarga: 130°C","Bitolas: 1,5 / 2,5 / 4,0 / 6,0 / 10,0 / 16,0 / 25,0 / 35,0 / 50,0 / 70,0 / 95,0mm²","Multipolares: 3x1,0 / 3x1,5 / 3x2,5 / 3x4,0 / 3x6,0mm²"],"observacoes":"Uso em toda a instalação elétrica. Alternativas: Cobrecom; General Cable."},{"id":"item-034","categoria":"CONECTORES E TERMINAIS","item":"Conector de derivação Taplink 40632","modelo":"CO.DE.AM.0060.00","marca":"Eletrokit","cor":"Amarela","tamanho":"Cabos de 2,5 a 6mm²","material":"PVC Antichama","especificacoes":["Temperatura suportável: 105°C","Lâmina de perfuração que rompe a isolação"],"observacoes":"Usado nas derivações elétricas. Alternativa: NTV AUTOMOTIVO NTV879."},{"id":"item-035","categoria":"CONECTORES E TERMINAIS","item":"Terminal elétrico com isolação","modelo":"Diversos","marca":"Eletrokit","cor":"Diversos","tamanho":"Cabos de 1,5 a 35mm²","material":"Tubo de cobre estanhado com isolação","especificacoes":["Terminal olhal: 1,5-35mm² em diversas cores","Terminal tubular simples: 1,5-50mm²","Terminal tubular duplo: 2x10mm² e 2x16mm²"],"observacoes":"Usado nas conexões dos cabos com componentes do quadro de distribuição. Alternativa: Intelli."},{"id":"item-036","categoria":"ELETRODUTOS E CAIXAS","item":"Eletroduto PVC rígido roscável","modelo":"Eletroduto Roscável","marca":"Amanco","cor":"Preta","tamanho":"Diâmetros 1/2\" a 4\"","material":"PVC Antichama","especificacoes":["Comprimento: 3m, com roscas nas duas extremidades","Roscas conforme NBR NM ISO 7-1","Diâmetros: 1/2\", 3/4\", 1\", 1.1/4\", 1.1/2\", 2\", 3\", 4\""],"observacoes":"Proteção mecânica das instalações elétricas sobre o forro. Alternativas: Tigre; Coflex."},{"id":"item-037","categoria":"ELETRODUTOS E CAIXAS","item":"Curva 90° eletroduto PVC rígido","modelo":"Eletroduto Roscável","marca":"Amanco","cor":"Preta","tamanho":"Diâmetros 1/2\" a 4\"","material":"PVC Antichama","especificacoes":["Roscas conforme NBR NM ISO 7-1","Diâmetros: 1/2\", 3/4\", 1\", 1.1/4\", 1.1/2\", 2.1/2\", 3\", 4\""],"observacoes":"Proteção mecânica das instalações elétricas sobre o forro. Alternativas: Tigre; Coflex."},{"id":"item-038","categoria":"ELETRODUTOS E CAIXAS","item":"Curva 45° eletroduto PVC rígido","modelo":"Eletroduto Roscável","marca":"Hidrossol","cor":"Preta","tamanho":"Diâmetros 3/4\" e 1\"","material":"PVC Antichama","especificacoes":["Diâmetros disponíveis: 3/4\", 1\""],"observacoes":"Proteção mecânica das instalações elétricas sobre o forro. Alternativas: Wetzel; Eletromax; Elecon."},{"id":"item-039","categoria":"ELETRODUTOS E CAIXAS","item":"Luva PVC para eletroduto rígido roscável","modelo":"Eletroduto Roscável","marca":"Amanco","cor":"Preta","tamanho":"Diâmetros 1/2\" a 4\"","material":"PVC Antichama","especificacoes":["Diâmetros: 1/2\", 3/4\", 1\", 1.1/4\", 1.1/2\", 2\", 3\", 4\""],"observacoes":"Emenda de barras de eletrodutos rígidos roscáveis. Alternativas: Tigre; Coflex."},{"id":"item-040","categoria":"ELETRODUTOS E CAIXAS","item":"Eletroduto PVC corrugado leve","modelo":"Corrugado Antichama Amarelo","marca":"Amanco","cor":"Amarela","tamanho":"Diâmetros 25mm e 32mm","material":"PVC antichama","especificacoes":["Classe: Leve","Compressão: Até 320N/5cm - NBR 15465","Corrugação: Paralela","Bobina de 25, 50 e 100m"],"observacoes":"Proteção mecânica embutida em paredes (uso interno). Alternativas: Tigre; Wetzel; Coflex."},{"id":"item-041","categoria":"ELETRODUTOS E CAIXAS","item":"Eletroduto PVC corrugado reforçado","modelo":"Corrugado Antichama Laranja","marca":"Amanco","cor":"Laranja","tamanho":"Diâmetros 25mm e 32mm","material":"PVC antichama","especificacoes":["Classe: Reforçado","Compressão: Até 750N/5cm - NBR 15465","Corrugação: Paralela","Bobina de 25, 50 e 100m"],"observacoes":"Ideal para embutir no concreto, lajes e contrapisos. Alternativas: Tigre; Wetzel; Coflex."},{"id":"item-042","categoria":"ELETRODUTOS E CAIXAS","item":"Eletroduto PEAD flexível corrugado","modelo":"Kanaduto SW","marca":"Kanaflex","cor":"Cinza escuro","tamanho":"Diâmetros 32 a 110mm","material":"PEAD (Polietileno de Alta Densidade)","especificacoes":["Corrugação: Anelar paralela","Compressão: >=450N - NBR 15715","Bobina de 25, 50 e 100 metros","Diâmetros: 32, 40, 50, 63, 90, 110mm"],"observacoes":"Proteção de instalações elétricas externas acima de 32mm, embutidas. Alternativa: Coflex."},{"id":"item-043","categoria":"ELETRODUTOS E CAIXAS","item":"Caixa de Luz","modelo":"Caixa de luz para sistemas elétricos","marca":"Amanco / Tigre","cor":"Amarela / Laranja","tamanho":"4\"x2\"; 4\"x4\"; 3\"x3\"","material":"PVC antichama","especificacoes":["4\"x2\" retangular (35587)","4\"x4\" quadrada (35588)","4\"x4\" octogonal fundo fixo reforçada (81033)"],"observacoes":"Pontos elétricos de luz, tomadas, interruptores ou passagem. Alternativas: Tigre; Coflex; Tramontina."},{"id":"item-044","categoria":"ELETRODUTOS E CAIXAS","item":"Caixa de passagem de piso 41722","modelo":"33042507","marca":"Tigre","cor":"Cinza","tamanho":"Ø300mm","material":"PVC","especificacoes":["Bitolas de eletroduto: 3/4\" e 1\""],"observacoes":"Caixa de passagem para instalações elétricas em área externa. Alternativa: Krona."},{"id":"item-045","categoria":"ELETRODUTOS E CAIXAS","item":"Caixa de passagem em chapa 40739","modelo":"de Embutir","marca":"Arcoir Metalúrgica","cor":"Bege","tamanho":"20x20x10 cm","material":"Chapa de aço com pintura","especificacoes":[],"observacoes":"Caixa de passagem abaixo do quadro elétrico. Alternativa: Cemar."},{"id":"item-046","categoria":"ELETRODUTOS E CAIXAS","item":"Caixa de passagem PVC embutir 40815","modelo":"CPT 15 (33048157)","marca":"Tigre","cor":"Branca","tamanho":"186 x 173,3 x 78,7mm","material":"PVC anti-chama","especificacoes":["Tampa branca fixada por parafusos","IP40","Nicho interno: 148 x 141 x 78,7mm"],"observacoes":"Alojamento do driver da fita LED da prateleira nas salas multipropósito. Alternativa: Cemar 911002."},{"id":"item-047","categoria":"ELETRODUTOS E CAIXAS","item":"Caixa de passagem em alumínio 95840","modelo":"CP 1010-6","marca":"Wetzel","cor":"Alumínio","tamanho":"108x108x65,5 mm","material":"Alumínio","especificacoes":["Parafusos com tratamento especial","Tampa reversível lisa e antiderrapante","Junta de vedação","IP 65"],"observacoes":"Caixa de saída para instalação dos refletores no chão. Alternativa: Tramontina."},{"id":"item-048","categoria":"INTERRUPTORES E TOMADAS","item":"Interruptores e tomadas - Linha Orion","modelo":"Linha Orion","marca":"Schneider","cor":"Branca","tamanho":"-","material":"-","especificacoes":["Corrente máxima 10A e 20A","Tensão máxima 250V","Interruptor Simples 10A (111284) / 25A (111285)","Interruptor Paralelo 10A (111283)","Interruptor Intermediário 10A (111282)","Tomada 2P+T 10A (111300) / 20A (111302) / 20A vermelha (111301)","Módulo Cego (111286) / saída fio (111287)"],"observacoes":"Comando da iluminação e alimentação de equipamentos. Alternativas: Pial Zeffia; Ilumi Slim; ABB Unno."},{"id":"item-049","categoria":"INTERRUPTORES E TOMADAS","item":"Interruptor com balizador - Linha Infiniti Plus","modelo":"Linha Infiniti Plus","marca":"Margirius","cor":"Branca","tamanho":"-","material":"-","especificacoes":["Corrente máxima 10A","Tensão máxima 250V","Interruptor Monopolar Simples (22102)","Interruptor Bipolar Simples (37904)","Módulo balizador luz vermelha bivolt (38424)"],"observacoes":"Acionamento do sistema de renovação de ar. Alternativa: Siemens linha Vivace."},{"id":"item-050","categoria":"INTERRUPTORES E TOMADAS","item":"Plugue desmontável 37776","modelo":"Linha Acessórios - 17728","marca":"Margirius","cor":"Preto","tamanho":"-","material":"Termoplástico","especificacoes":["Contatos em latão","Desmontável com prensa cabos","Corrente máxima 10A / 2P+T 10A","Tensão máxima 250V"],"observacoes":"Conecta fiação das luminárias com tomadas nos perfilados (PC) e tomadas tipo plugue (PS). Alternativa: Exatron LEPA4004."},{"id":"item-051","categoria":"INTERRUPTORES E TOMADAS","item":"Tomada desmontável 36837","modelo":"Linha Acessórios - 18320","marca":"Margirius","cor":"Preto","tamanho":"-","material":"Termoplástico","especificacoes":["Contatos em latão","Desmontável com prensa cabos","Corrente máxima 10A / 2P+T 10A","Tensão máxima 250V"],"observacoes":"Conecta plugue da fita LED das prateleiras e luminárias de forro. Alternativa: Exatron LEPA4003."},{"id":"item-052","categoria":"INTERRUPTORES E TOMADAS","item":"Filtro de linha iClamper Energia 8","modelo":"Linha iClamper Energia 8","marca":"Clamper","cor":"Preto","tamanho":"242,1 x 81 x 44 mm","material":"Material auto-extinguível","especificacoes":["Com DPS classe III - Varistor MOV e GDT","Corrente nominal: 10A / 8 tomadas 2P+T 10A","Tensão máxima contínua: 275Vca","Comprimento do cabo: 1,30m","Grau de proteção: IP20"],"observacoes":"Usado para atender equipamentos da mesa de som. Alternativa: Intelbras EPE 1008+ PT."},{"id":"item-053","categoria":"QUADROS DE DISTRIBUIÇÃO","item":"Quadro Comando de Sobrepor","modelo":"Variado","marca":"Cemar Legrand","cor":"Bege RAL 7032","tamanho":"800x600x250mm ou 1200x800x250mm","material":"Chapa metálica","especificacoes":["Pino metálico nas dobradiças","Borracha injetada na porta","Porta abertura 130°","IP 54","Modelo CE-8060-25 (80223) e CE-12080-25 (80224)"],"observacoes":"Distribuição e proteção dos circuitos de carga. Alternativa: BRUM BRC-80.60.25 ou BRC-120.80.25."},{"id":"item-054","categoria":"QUADROS DE DISTRIBUIÇÃO","item":"Quadro Comando de embutir - Ouro box","modelo":"Ouro box","marca":"Steck","cor":"Branco","tamanho":"Conforme projeto","material":"Termoplástico auto extinguível","especificacoes":["Porta abertura 180°","Capacidade: até 125A","IP 40 (fechada) / IP 30 (aberta)","24 disjuntores: SCM24OBR (111312)","36 disjuntores: SCE36PO (111315)"],"observacoes":"Distribuição e proteção de circuitos em pequenas reformas. Alternativas: BRUM; Schneider."},{"id":"item-055","categoria":"DISJUNTORES DIN","item":"Disjuntores DIN - Linha SDD (até 63A)","modelo":"Linha SDD","marca":"STECK","cor":"-","tamanho":"-","material":"-","especificacoes":["Correntes nominais até 63A","Tensão: 1P 240Vac / 2P e 3P 400Vac","Disparo térmico e magnético","Fixação: trilho DIN 35mm","Capacidade de ruptura: >= 3kA em 230V","Curva de disparo tipo B ou C","Modelos: 1P, 2P e 3P de 16A a 63A"],"observacoes":"Proteção dos circuitos contra sobrecargas e curtos-circuitos. Alternativas: ABB; Siemens; Schneider."},{"id":"item-056","categoria":"DISJUNTORES DIN","item":"Disjuntor DIN 70A 22729","modelo":"Linha SDD 4.5kA","marca":"STECK","cor":"-","tamanho":"-","material":"-","especificacoes":["Corrente nominal: 70A","Tensão máxima: 400Vca","Disparo térmico e magnético","Fixação: trilho DIN 35mm","Capacidade de ruptura: >=4,5kA em 400V","Curva tipo C / 3 polos"],"observacoes":"Proteção de circuitos contra sobrecargas e curtos-circuitos. Alternativas: Siemens; Schneider."},{"id":"item-057","categoria":"DISJUNTORES DIN","item":"Disjuntor DIN 80-125A","modelo":"Linha SDD","marca":"STECK","cor":"-","tamanho":"-","material":"-","especificacoes":["Correntes: 80A (111318), 100A (111303), 125A (111334)","Tensão máxima: 400Vca","Capacidade de ruptura: >=10kA em 400V","Fixação: trilho DIN 35mm","Curva tipo C / 3 polos"],"observacoes":"Proteção de circuitos contra sobrecargas e curtos-circuitos. Alternativas: ABB; Siemens; Schneider."},{"id":"item-058","categoria":"DISJUNTORES DIN","item":"Disjuntor DIN 80A Bipolar - Easy9","modelo":"Linha EASY9","marca":"Schneider","cor":"-","tamanho":"-","material":"-","especificacoes":["Corrente nominal: 80A / 2 polos","Tensão máxima: 400Vca","Capacidade de ruptura: >=4,5kA","Fixação: trilho DIN 35mm","Curva tipo C"],"observacoes":"Proteção de circuitos contra sobrecargas e curtos-circuitos. Alternativas: ABB; Siemens."},{"id":"item-059","categoria":"DISPOSITIVO DR","item":"Interruptor diferencial (DR) 111313","modelo":"SDR22530","marca":"Steck","cor":"-","tamanho":"-","material":"-","especificacoes":["Corrente nominal: 25A / 2 polos","Corrente residual: 30mA","Tensão nominal: 230V","Capacidade de ruptura: >=6kA","Fixação: trilho DIN 35mm","Expectativa de vida: 5.000 operações"],"observacoes":"Proteção pessoal contra choques elétricos e prevenção de incêndio. Alternativas: ABB; Siemens."},{"id":"item-060","categoria":"DISPOSITIVO DPS","item":"DPS - Dispositivo Proteção contra Surtos","modelo":"Front","marca":"Clamper","cor":"Vermelho","tamanho":"Variadas","material":"-","especificacoes":["DPS monopolares / Varistor MOV","Tempo de resposta: <25ns","Fixação: trilho DIN 35mm","175V 20kA (111266)","275V 20kA (111267)","275V 12,5A/60kA (111268)"],"observacoes":"Proteção contra descargas indiretas e sobretensões. Alternativas: ABB; Siemens; Schneider."},{"id":"item-061","categoria":"CONTATOR MODULAR","item":"Contator modular 2 Polos 25A","modelo":"2 Polos 25A","marca":"Steck","cor":"Branco","tamanho":"Altura 83,5mm, Largura 18mm","material":"-","especificacoes":["Polos: 2NA / Corrente: 25A","Tensão de operação: 230Vac","AC-7a: 25A / AC-7b: 8,5A","Fixação: trilho DIN 35mm","127V: SDM2520F (35768) / 220V: SDM2520M (12425)"],"observacoes":"Comando de iluminação paisagismo/estacionamento com mais de 7 luminárias. Alternativas: Schneider; Exatron."},{"id":"item-062","categoria":"CONTATOR MODULAR","item":"Contator modular 2 Polos 40A","modelo":"2 Polos 40A","marca":"Steck","cor":"Branco","tamanho":"Altura 83,5mm, Largura 18mm","material":"-","especificacoes":["Polos: 2NA / Corrente: 40A","Tensão de operação: 230Vac","AC-7a: 40A / AC-7b: 15A","Fixação: trilho DIN 35mm"],"observacoes":"Comando de iluminação paisagismo/estacionamento com mais de 7 luminárias. Alternativas: Exatron; Schneider."},{"id":"item-063","categoria":"BARRAMENTOS","item":"Barramento pente de alimentação DIN","modelo":"Easy9 e Acti 9","marca":"Schneider","cor":"Branca","tamanho":"Variados","material":"Cobre com isolamento plástico","especificacoes":["Corrente nominal: 80A a 100A","Tensão máxima: 400V","Tensão de impulso nominal: 4kV","Corrente de curto-circuito: 25kA","Modelos: Mono/Bi/Tri 12/24/57 polos 80A e 100A"],"observacoes":"Alimentação dos disjuntores DIN. Alternativas: ABB; Siemens; Steck."},{"id":"item-064","categoria":"BARRAMENTOS","item":"Barramento de terra e neutro","modelo":"Código 662/663/664/665","marca":"Multhiplos","cor":"Cobre","tamanho":"135 mm de comprimento","material":"Cobre","especificacoes":["Correntes: 100A / 195A","Tensão máxima: 230V","20 ou 30 parafusos de conexão","Isolador verde (terra) / azul (neutro)"],"observacoes":"Conexão de neutro e terra nos quadros elétricos. Alternativa: Steck."},{"id":"item-065","categoria":"TRILHO DIN","item":"Trilho DIN 111265","modelo":"-","marca":"Alge","cor":"Prata","tamanho":"35 x 7,5 mm (L x A)","material":"Aço pré zincado","especificacoes":["Aço pré zincado liso","Comprimento: conforme projeto"],"observacoes":"Fixação de disjuntores, DRs, DPS's, contatoras nos quadros elétricos. Alternativas: Siemens; Schneider; Steck."},{"id":"item-066","categoria":"SPDA","item":"Tampa ferro fundido caixa inspeção 90714","modelo":"Tampa com garra – TEL-551","marca":"Termotécnica","cor":"Preta","tamanho":"Diâmetro 300mm","material":"Ferro fundido","especificacoes":["Carga máxima: 100Kg","Para áreas sem tráfego de veículos"],"observacoes":"Alternativa: Raycon."},{"id":"item-067","categoria":"SPDA","item":"Tampa ferro fundido com escotilha 31906","modelo":"Tampa com escotilha – TEL-536","marca":"Termotécnica","cor":"Preta","tamanho":"Diâmetro externo 310mm","material":"Ferro fundido","especificacoes":["Escotilha: 190 x 185mm","Passagem livre: 195 x 160mm","Carga máxima: 200Kg","Para áreas com tráfego de veículos"],"observacoes":"Alternativa: Raycon."},{"id":"item-068","categoria":"SPDA","item":"Caixa de inspeção para aterramento 18530","modelo":"TEL-552","marca":"Termotécnica","cor":"Branca ou preta","tamanho":"Diâmetro externo 300mm, Comprimento 300mm","material":"PVC ou polipropileno","especificacoes":["Espessura: 3,5mm"],"observacoes":"Inspeção e testes de continuidade do aterramento elétrico. Alternativa: Raycon."},{"id":"item-069","categoria":"SPDA","item":"Grampo de aterramento 39975","modelo":"Conector cabo-haste – TEL 585","marca":"Termotécnica","cor":"Cobre","tamanho":"A=71mm, B=52mm, C=40mm, Rosca M10","material":"Bronze ou liga de cobre","especificacoes":["Alta resistência mecânica e à corrosão","Para cabo de 16-70mm²","Para hastes de até 3/4\"","Conexão a 90° ou em paralelo"],"observacoes":"Conecta o condutor de aterramento à haste. Alternativa: Raycon."},{"id":"item-070","categoria":"SPDA","item":"Haste de aterramento alta camada 18240","modelo":"TEL-5823","marca":"Termotécnica","cor":"Cobre","tamanho":"Comprimento 3m, Diâmetro 3/4\"","material":"Aço SAE 1010/1020 com revestimento de cobre eletrolítico","especificacoes":["Tipo CoPCerweld de alta camada","Revestimento: cobre eletrolítico 99,9%","Espessura do revestimento: 254µ","Extremidade pontiaguda"],"observacoes":"Eletrodo de aterramento encravado no solo. Alternativa: Intelli."},{"id":"item-071","categoria":"SPDA","item":"Fita isolante líquida 97857","modelo":"Fita isolante líquida","marca":"QUIMATIC","cor":"Vermelha","tamanho":"-","material":"-","especificacoes":["Não propagante de chama","Impermeável","Isolação até 6500V para espessura >=1mm"],"observacoes":"Isolamento e impermeabilização de conexões elétricas. Alternativas: BQL Biolub Química; Wurth."},{"id":"item-072","categoria":"SPDA","item":"Fita autofusão de borracha 27853","modelo":"Fita Autofusão 3M Scotch 23","marca":"3M","cor":"Preta","tamanho":"-","material":"-","especificacoes":["Temperatura operacional: 90°C","Alongamento: 700%","Isolamento primário até 69kV","Espessura: 0,76mm","Flamabilidade: Retardador de chamas"],"observacoes":"Isolação de emendas de cabos de baixa tensão. Alternativa: Foxlux."},{"id":"item-073","categoria":"SPDA","item":"Fita isolante de PVC 81389","modelo":"Fita Isolante 3M Scotch 33+","marca":"3M","cor":"Preta","tamanho":"Comprimento 20m","material":"-","especificacoes":["Faixa de temperatura: 0°C a 105°C","Alongamento: 210%","Espessura: 0,19mm","Auto-extinguível","Isolação: <= 750V"],"observacoes":"Isolação de emendas de cabos de baixa tensão. Alternativas: Tigre; Foxlux."},{"id":"item-074","categoria":"SPDA","item":"Cabo de cobre nu","modelo":"Variados","marca":"Termotécnica","cor":"Cobre","tamanho":"Bitolas 16, 35, 50mm²","material":"Cobre","especificacoes":["Encordoamento classe 2A","Têmpera meia dura / 7 fios","Normas: NBR6524, NBR5349, NBR5419","Bitolas: 16mm² (54505), 35mm² (30927), 50mm² (30594)"],"observacoes":"Para sistemas de aterramento de descargas atmosféricas. Alternativas: Nexans; Prysmian."},{"id":"item-075","categoria":"SPDA","item":"Barra chata de alumínio 36081","modelo":"TEL-771","marca":"Termotécnica","cor":"Cinza","tamanho":"Largura 7/8\", Espessura 1/8\", Comprimento 3m","material":"Alumínio","especificacoes":["9 furos de Ø7mm","Conformação para facilitar encaixe"],"observacoes":"Para fachadas e locais que exigem estética. Não enterrar. Alternativas: Raycon; Gelcam."}];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+const DB_PATH = 'checklist_obra';
+let state = { checked: {}, deleted: {}, cart: {}, bought: {} };
+let view = 'all', query = '', catFilter = '';
+let toastTimer;
+
+// ── FIREBASE / LOCALSTORAGE ───────────────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-txt');
+  if (status === 'online')  { dot.className = 'sync-dot online';  txt.textContent = 'Sincronizado'; }
+  if (status === 'syncing') { dot.className = 'sync-dot syncing'; txt.textContent = 'Salvando...'; }
+  if (status === 'offline') { dot.className = 'sync-dot';         txt.textContent = 'Offline — dados salvos localmente'; }
+}
+
+function saveState() {
+  // Always save to localStorage as backup
+  try { localStorage.setItem('checklist_obra_v1', JSON.stringify(state)); } catch(e) {}
+
+  // Save to Firebase if available
+  if (window.firebaseReady && window.firebaseDB) {
+    setSyncStatus('syncing');
+    try {
+      window.firebaseSet(window.firebaseRef(window.firebaseDB, DB_PATH), state)
+        .then(() => setSyncStatus('online'))
+        .catch(() => setSyncStatus('offline'));
+    } catch(e) { setSyncStatus('offline'); }
+  }
+}
+
+function loadState() {
+  // Load from localStorage first (instant)
+  try {
+    const s = localStorage.getItem('checklist_obra_v1');
+    if (s) { state = { checked:{}, deleted:{}, cart:{}, bought:{}, ...JSON.parse(s) }; }
+  } catch(e) {}
+
+  // Then try Firebase (live sync)
+  if (window.firebaseReady && window.firebaseDB) {
+    setSyncStatus('syncing');
+    window.firebaseOnValue(window.firebaseRef(window.firebaseDB, DB_PATH), (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        state = { checked:{}, deleted:{}, cart:{}, bought:{}, ...data };
+        try { localStorage.setItem('checklist_obra_v1', JSON.stringify(state)); } catch(e) {}
+      }
+      setSyncStatus('online');
+      render();
+      updateStats();
+    }, () => setSyncStatus('offline'));
+  } else {
+    setSyncStatus('offline');
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() {
+  buildCatFilter();
+  loadState();
+  render();
+  updateStats();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  }
+}
+
+window.addEventListener('firebaseLoaded', init);
+// Fallback if Firebase doesn't load in 3s
+setTimeout(() => {
+  if (!document.getElementById('cl-list').innerHTML) init();
+}, 3000);
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render() { renderChecklist(); renderCart(); updateBadge(); }
+
+function getFiltered() {
+  return CATALOG.filter(item => {
+    if (state.deleted[item.id]) return false;
+    if (catFilter && item.categoria !== catFilter) return false;
+    if (query) {
+      const q = query.toLowerCase();
+      if (![item.item, item.modelo, item.marca, item.categoria].some(f => (f||'').toLowerCase().includes(q))) return false;
+    }
+    if (view === 'pending' && state.checked[item.id]) return false;
+    return true;
+  });
+}
+
+function renderChecklist() {
+  const list = document.getElementById('cl-list');
+  const filtered = getFiltered();
+  document.getElementById('vis-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'item' : 'itens'}`;
+
+  if (!filtered.length) { list.innerHTML = '<div class="no-res">Nenhum item encontrado</div>'; return; }
+
+  const grouped = {};
+  filtered.forEach(i => { if (!grouped[i.categoria]) grouped[i.categoria] = []; grouped[i.categoria].push(i); });
+
+  list.innerHTML = Object.entries(grouped).map(([cat, items]) => `
+    <div class="cat-hdr">${esc(cat)}<span class="cat-count">${items.length}</span></div>
+    ${items.map(buildCard).join('')}
+  `).join('');
+}
+
+function buildCard(item) {
+  const checked = !!state.checked[item.id];
+  const inCart  = !!state.cart[item.id];
+  return `
+    <div class="item-card${checked ? ' checked' : ''}" id="card-${item.id}">
+      <button class="chk" onclick="toggleCheck('${item.id}')">${checked ? '✓' : ''}</button>
+      <div class="item-body" onclick="openDetail('${item.id}')">
+        <div class="item-name">${esc(item.item)}</div>
+        <div class="item-meta">${esc(item.marca||'')}${item.modelo ? ' · '+esc(item.modelo) : ''}</div>
+      </div>
+      <div class="actions">
+        <button class="abtn cart${inCart?' in':''}" onclick="toggleCart('${item.id}')" title="${inCart?'Remover do carrinho':'Adicionar à lista'}">🛒</button>
+        <button class="abtn del" onclick="deleteItem('${item.id}')" title="Remover da lista">🗑</button>
+      </div>
+    </div>`;
+}
+
+function renderCart() {
+  const list  = document.getElementById('cart-list');
+  const empty = document.getElementById('cart-empty');
+  const clearBtn = document.getElementById('btn-clear');
+  const cartItems = CATALOG.filter(i => state.cart[i.id]);
+
+  if (!cartItems.length) {
+    list.innerHTML = '';
+    empty.classList.add('show');
+    clearBtn.style.display = 'none';
+    document.getElementById('cart-sub').textContent = 'Itens adicionados durante a conferência';
+    return;
+  }
+
+  empty.classList.remove('show');
+  clearBtn.style.display = 'block';
+  const bought = cartItems.filter(i => state.bought[i.id]).length;
+  document.getElementById('cart-sub').textContent = `${cartItems.length} ${cartItems.length===1?'item':'itens'} · ${bought} comprado${bought!==1?'s':''}`;
+
+  list.innerHTML = cartItems.map(item => {
+    const isBought = !!state.bought[item.id];
+    return `
+      <div class="item-card${isBought?' bought':''}" id="cart-card-${item.id}">
+        <input type="checkbox" class="chk" style="width:20px;height:20px;min-width:20px;accent-color:#22c55e;cursor:pointer;border:none;"
+          ${isBought?'checked':''} onchange="toggleBought('${item.id}')">
+        <div class="item-body" onclick="openDetail('${item.id}')">
+          <div class="item-name">${esc(item.item)}</div>
+          <div class="item-meta">${esc(item.marca||'')}</div>
+          <span class="cat-tag">${esc(item.categoria)}</span>
+        </div>
+        <div class="actions">
+          <button class="abtn del" onclick="removeCart('${item.id}')">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function toggleCheck(id) {
+  state.checked[id] = !state.checked[id];
+  if (!state.checked[id]) delete state.checked[id];
+  saveState(); render(); updateStats();
+  toast(state.checked[id] ? '✓ Material conferido' : 'Marcação removida', state.checked[id] ? 'green' : '');
+}
+
+function toggleCart(id) {
+  const was = !!state.cart[id];
+  state.cart[id] = !state.cart[id];
+  if (!state.cart[id]) { delete state.cart[id]; delete state.bought[id]; }
+  saveState(); render();
+  toast(was ? 'Removido do carrinho' : '🛒 Adicionado à lista de compras', 'amber');
+}
+
+function deleteItem(id) {
+  state.deleted[id] = true;
+  delete state.checked[id]; delete state.cart[id]; delete state.bought[id];
+  saveState(); render(); updateStats();
+  toast('Item removido da lista', 'red');
+}
+
+function removeCart(id) {
+  delete state.cart[id]; delete state.bought[id];
+  saveState(); render(); updateBadge();
+  toast('Removido da lista de compras', 'red');
+}
+
+function toggleBought(id) {
+  state.bought[id] = !state.bought[id];
+  if (!state.bought[id]) delete state.bought[id];
+  saveState(); renderCart();
+}
+
+function clearCart() {
+  if (!confirm('Limpar toda a lista de compras?')) return;
+  Object.keys(state.cart).forEach(id => { delete state.cart[id]; delete state.bought[id]; });
+  saveState(); render(); toast('Lista de compras limpa', 'red');
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const active  = CATALOG.filter(i => !state.deleted[i.id]);
+  const total   = active.length;
+  const checked = active.filter(i => state.checked[i.id]).length;
+  const pct     = total > 0 ? Math.round(checked/total*100) : 0;
+  document.getElementById('cnt-total').textContent = total;
+  document.getElementById('cnt-ok').textContent    = checked;
+  document.getElementById('cnt-bad').textContent   = total - checked;
+  document.getElementById('prog-bar').style.width  = pct + '%';
+  document.getElementById('prog-pct').textContent  = pct + '%';
+}
+
+function updateBadge() {
+  const n = Object.keys(state.cart).length;
+  const b = document.getElementById('cart-badge');
+  b.textContent = n; b.style.display = n > 0 ? 'inline-block' : 'none';
+}
+
+// ── SEARCH / FILTER ───────────────────────────────────────────────────────────
+function onSearch() {
+  query = document.getElementById('search').value.trim();
+  document.getElementById('search-clear').style.display = query ? 'block' : 'none';
+  renderChecklist();
+}
+function clearSearch() {
+  document.getElementById('search').value = ''; query = '';
+  document.getElementById('search-clear').style.display = 'none';
+  renderChecklist();
+}
+function onFilter() { catFilter = document.getElementById('cat-filter').value; renderChecklist(); }
+function setView(v) {
+  view = v;
+  document.getElementById('v-all').classList.toggle('active', v==='all');
+  document.getElementById('v-pend').classList.toggle('active', v==='pending');
+  renderChecklist();
+}
+function buildCatFilter() {
+  const cats = [...new Set(CATALOG.map(i => i.categoria))].sort();
+  const sel = document.getElementById('cat-filter');
+  cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.getElementById('panel-cl').classList.toggle('active', t==='cl');
+  document.getElementById('panel-cart').classList.toggle('active', t==='cart');
+  document.getElementById('tab-cl').classList.toggle('active', t==='cl');
+  document.getElementById('tab-cart').classList.toggle('active', t==='cart');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openDetail(id) {
+  const item = CATALOG.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('m-cat').textContent   = item.categoria;
+  document.getElementById('m-title').textContent = item.item;
+
+  const fields = [['Modelo',item.modelo],['Marca',item.marca],['Cor',item.cor],['Tamanho',item.tamanho],['Material',item.material]];
+  document.getElementById('m-grid').innerHTML = fields
+    .filter(([,v]) => v && v !== '-')
+    .map(([l,v]) => `<div class="modal-row"><span class="modal-lbl">${l}</span><span class="modal-val">${esc(v)}</span></div>`)
+    .join('');
+
+  const specsEl = document.getElementById('m-specs-sec');
+  if (item.especificacoes && item.especificacoes.length) {
+    document.getElementById('m-specs').innerHTML = item.especificacoes.map(s => `<li>${esc(s)}</li>`).join('');
+    specsEl.style.display = 'block';
+  } else specsEl.style.display = 'none';
+
+  const obsEl = document.getElementById('m-obs-sec');
+  if (item.observacoes && item.observacoes !== '-') {
+    document.getElementById('m-obs').textContent = item.observacoes;
+    obsEl.style.display = 'block';
+  } else obsEl.style.display = 'none';
+
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal')) return;
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
