@@ -320,7 +320,7 @@ function buildCard(item){
     thumb+
     '<div class="item-body" onclick="openDetail(\''+item.id+'\')">'+
       '<div class="item-name">'+esc(item.item)+'</div>'+
-      (nomeDisplay!==item.item?'<div class="item-display-name">'+esc(nomeDisplay)+'</div>':'')++
+      (nomeDisplay!==item.item?'<div class="item-display-name">'+esc(nomeDisplay)+'</div>':'')+
       '<div class="item-meta">'+esc(item.marca||'')+(item.modelo?' · '+esc(item.modelo):'')+'</div>'+
     '</div>'+
     '<div class="actions">'+
@@ -341,7 +341,7 @@ function renderCart(){
       '<input type="checkbox" style="width:20px;height:20px;min-width:20px;accent-color:#22c55e;cursor:pointer;border:none;" '+(isBought?'checked':'')+' onchange="toggleBought(\''+item.id+'\')">'+
       '<div class="item-body" onclick="openDetail(\''+item.id+'\')">'+
         '<div class="item-name">'+esc(item.item)+'</div>'+
-      (nomeDisplay!==item.item?'<div class="item-display-name">'+esc(nomeDisplay)+'</div>':'')++
+      (nomeDisplay!==item.item?'<div class="item-display-name">'+esc(nomeDisplay)+'</div>':'')+
         '<div class="item-meta">'+esc(item.marca||'')+'</div>'+
         '<span class="cat-tag">'+esc(item.categoria)+'</span>'+
       '</div>'+
