@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ── Data loading ─────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const res = await fetch('data.json');
+    const res = await fetch('./data.json');
     allItems = await res.json();
   } catch (e) {
     console.error('Erro ao carregar data.json:', e);
